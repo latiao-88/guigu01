@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>意识科技暗记卡片 - 朗读增强版</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f8fafc;
+            --secondary: #94a3b8;
+            --accent: #10b981;
+        }
+
+        [data-theme="light"] {
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --secondary: #64748b;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg); color: var(--text);
+            display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+        }
+
+        /* 顶部进度条 */
+        .header { width: 100%; position: sticky; top: 0; z-index: 100; background: var(--bg); }
+        .progress-container { width: 100%; height: 6px; background: #334155; }
+        .progress-bar { height: 100%; background: var(--primary); width: 0%; transition: 0.3s; }
+
+        /* 卡片舞台 */
+        .scene { width: 360px; height: 520px; perspective: 1000px; margin-top: 20px; cursor: pointer; }
+        .card { width: 100%; height: 100%; position: relative; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); transform-style: preserve-3d; }
+        .card.is-flipped { transform: rotateY(180deg); }
+
+        .card-face {
+            position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            padding: 2rem; box-sizing: border-box; border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); background: var(--card-bg);
+            border: 1px solid rgba(255,255,255,0.1); text-align: center;
+        }
+        .card-back { transform: rotateY(180deg); }
+
+        /* 内容样式 */
+        .main-text { font-size: 2.2rem; font-weight: 800; color: var(--primary); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 10px; }
+        .ipa { font-size: 1.2rem; color: var(--secondary); margin-bottom: 1.5rem; }
+        .example-container { 
+            background: rgba(0,0,0,0.2); padding: 1.2rem; border-radius: 15px; 
+            font-size: 1.05rem; line-height: 1.6; position: relative; text-align: left; width: 100%;
+        }
+        [data-theme="light"] .example-container { background: #f1f5f9; }
+
+        /* 小喇叭按钮 */
+        .speaker-btn {
+            background: none; border: none; cursor: pointer; font-size: 1.4rem;
+            color: var(--secondary); transition: 0.2s; padding: 5px;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .speaker-btn:hover { color: var(--primary); transform: scale(1.1); }
+        .speaker-btn-small { font-size: 1.1rem; vertical-align: middle; margin-left: 5px; }
+
+        /* 控制栏 */
+        .controls { margin-top: 25px; display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+        button.action-btn { 
+            padding: 10px 20px; border-radius: 12px; border: none; 
+            background: var(--primary); color: white; cursor: pointer; font-weight: 600;
+        }
+        button.action-btn.secondary { background: #475569; }
+        button.active { background: var(--accent) !important; }
+
+        /* 设置区域 */
+        .settings { margin-top: 20px; display: flex; gap: 20px; font-size: 0.9rem; color: var(--secondary); align-items: center; }
+        .mode-tag { position: absolute; top: 15px; left: 15px; font-size: 0.7rem; font-weight: bold; opacity: 0.4; }
+
+        @media (max-width: 400px) { .scene { width: 92vw; height: 480px; } }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="progress-container"><div class="progress-bar" id="progressBar"></div></div>
+        <div style="display: flex; justify-content: space-between; padding: 10px 20px; font-size: 0.8rem; opacity: 0.7;">
+            <span>CONSCIOUSNESS SCHEMA PRO</span>
+            <span id="counter">1 / 20</span>
+        </div>
+    </div>
+
+    <div class="scene">
+        <div class="card" id="card" onclick="handleCardClick(event)">
+            <!-- 正面 -->
+            <div class="card-face card-front">
+                <div class="mode-tag" id="tag-front">正面</div>
+                <div class="main-text">
+                    <span id="f-main">Word</span>
+                    <button class="speaker-btn" onclick="speakMainFront(event)">🔊</button>
+                </div>
+                <div id="f-ipa" class="ipa">/ipa/</div>
+                <div class="example-container">
+                    <span id="f-ex">Example sentence here.</span>
+                    <button class="speaker-btn speaker-btn-small" onclick="speakExFront(event)">🔊</button>
+                </div>
+            </div>
+            <!-- 背面 -->
+            <div class="card-face card-back">
+                <div class="mode-tag" id="tag-back">背面</div>
+                <div class="main-text">
+                    <span id="b-main" style="color: var(--accent);">含义</span>
+                    <button class="speaker-btn" onclick="speakMainBack(event)">🔊</button>
+                </div>
+                <div class="example-container" style="margin-top: 10px;">
+                    <span id="b-ex">中文例句内容。</span>
+                    <button class="speaker-btn speaker-btn-small" onclick="speakExBack(event)">🔊</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="action-btn secondary" onclick="prevCard()">◀ 上一个</button>
+        <button class="action-btn secondary" onclick="nextCard()">下一个 ▶</button>
+        <button class="action-btn secondary" onclick="swapMode()" id="modeBtn">🔄 模式: 英 ➔ 中</button>
+        <button class="action-btn secondary" onclick="shuffleCards()">🔀 随机洗牌</button>
+        <button class="action-btn" onclick="toggleAutoFlip()" id="autoFlipBtn">▶ 自动翻页</button>
+    </div>
+
+    <div class="settings">
+        <label style="cursor:pointer"><input type="checkbox" id="autoVoice" checked> 🎤 切换即自动朗读</label>
+        <button class="action-btn secondary" style="padding: 5px 10px;" onclick="toggleTheme()">🌓 主题</button>
+    </div>
+
+    <script>
+        const rawData = [
+            {en: "Schema", ipa: "/ˈskiːmə/", en_ex: "Our core asset is a unique schema that categorizes human consciousness.", cn: "底层架构 / 模式", cn_ex: "我们的核心资产是一个将人类意识进行分类的独特底层架构。"},
+            {en: "Granularity", ipa: "/ˌɡrænjuˈlærəti/", en_ex: "We provide a level of granularity that traditional models cannot match.", cn: "颗粒度", cn_ex: "我们提供的颗粒度水平是传统模型无法企及的。"},
+            {en: "Dimensionality", ipa: "/daɪˌmenʃəˈnæləti/", en_ex: "This high-dimensionality map allows us to track subtle shifts in states.", cn: "维度 / 维数", cn_ex: "这种高维度的图谱让我们能够追踪状态的微妙变化。"},
+            {en: "Topography", ipa: "/təˈpɒɡrəfi/", en_ex: "We are building a topography of human consciousness for the AI era.", cn: "拓扑图 / 地形图", cn_ex: "我们正在为 AI 时代构建一张人类意识的拓扑图。"},
+            {en: "AI Alignment", ipa: "/ˌeɪˈaɪ əˈlaɪnmənt/", en_ex: "Our protocol is the ultimate solution for AI alignment at the consciousness level.", cn: "AI 对齐", cn_ex: "我们的协议是意识层面上 AI 对齐难题的终极解决方案。"},
+            {en: "Semantic Energy Mapping", ipa: "/sɪˈmæntɪk ˈenədʒi ˈmæpɪŋ/", en_ex: "Semantic energy mapping reveals the hidden intent behind human language.", cn: "语义能量图谱", cn_ex: "语义能量图谱揭示了隐藏在人类语言背后的意图。"},
+            {en: "Vocal Micro-tremors", ipa: "/ˈvoʊkl ˈmaɪkroʊ ˈtremərz/", en_ex: "We analyze vocal micro-tremors to detect harmonics in the voice.", cn: "声带微震颤", cn_ex: "我们分析声带微震颤来检测声音中的谐波特征。"},
+            {en: "QRNG", ipa: "[Quantum Sensor]", en_ex: "The QRNG chip in the smartphone acts as a sensor for conscious intention.", cn: "量子随机数发生器", cn_ex: "手机里的量子随机数发生器芯片充当了意识感应器。"},
+            {en: "Coherence", ipa: "/koʊˈhɪərəns/", en_ex: "Higher consciousness creates coherence in quantum fields.", cn: "相干性 / 连贯性", cn_ex: "更高的意识状态在量子场中创造了相干性。"},
+            {en: "Entropy", ipa: "/ˈentrəpi/", en_ex: "We measure the reduction of entropy in random data sequences.", cn: "熵 (无序度)", cn_ex: "我们测量随机数据序列中熵（无序度）的减少。"},
+            {en: "Fourier Transform", ipa: "/ˈfʊrieɪ ˈtrænsfɔːrm/", en_ex: "We use Fourier transform to decompose complex consciousness signals.", cn: "傅里叶变换", cn_ex: "我们利用傅里叶变换来分解复杂的意识信号。"},
+            {en: "BCI", ipa: "[Brain Interface]", en_ex: "Our software integrates seamlessly with existing BCI hardware.", cn: "脑机接口", cn_ex: "我们的软件与现有的脑机接口硬件无缝集成。"},
+            {en: "EEG", ipa: "[Brainwave Data]", en_ex: "High-density EEG data provides the biological validation for our 200 points.", cn: "脑电图", cn_ex: "高密度脑电图数据为我们的 200 个检测点提供了生物学验证。"},
+            {en: "N400", ipa: "/ˌen fɔːr ˈhʌndrəd/", en_ex: "The N400 response confirms the brain's recognition of the consciousness points.", cn: "N400脑电波", cn_ex: "N400 响应确认了大脑对这些意识点的识别。"},
+            {en: "Incubator", ipa: "/ˈɪŋkjubeɪtə/", en_ex: "We are seeking an incubator to help us refine our business model.", cn: "孵化器", cn_ex: "我们正在寻找一家孵化器来帮助我们完善商业模式。"},
+            {en: "Accelerator", ipa: "/əkˈseləreɪtə/", en_ex: "Joining a top-tier accelerator will give us access to Silicon Valley VCs.", cn: "加速器", cn_ex: "加入一家顶级的加速器将让我们有机会接触到硅谷风投。"},
+            {en: "Protocol", ipa: "/ˈproʊtəkɒl/", en_ex: "This is not just an app; it is a universal protocol for consciousness data.", cn: "协议 / 准则", cn_ex: "这不仅仅是一个 App，这是一个通用的意识数据协议。"},
+            {en: "MVP", ipa: "[Product Prototype]", en_ex: "Our MVP will focus on the QRNG-based consciousness detector.", cn: "最小可行性产品", cn_ex: "我们的最小可行性产品将侧重于量子意识检测器。"},
+            {en: "Seed Round", ipa: "/siːd raʊnd/", en_ex: "We are raising a Seed Round to recruit our lead AI engineer.", cn: "种子轮", cn_ex: "我们正在筹集种子轮资金来招募我们的首席 AI 工程师。"},
+            {en: "Disruptive Technology", ipa: "/dɪsˈrʌptɪv tekˈnɒlədʒi/", en_ex: "This is a disruptive technology bridging spirituality and silicon.", cn: "颠覆性技术", cn_ex: "这是一项连接灵性与硅基芯片的颠覆性技术。"}
+        ];
+
+        let cards = [...rawData];
+        let currentIndex = 0;
+        let isEnglishFirst = true;
+        let autoFlipTimer = null;
+
+        function updateCard() {
+            const cardElement = document.getElementById('card');
+            cardElement.classList.remove('is-flipped');
+            const item = cards[currentIndex];
+
+            if (isEnglishFirst) {
+                renderFront(item.en, item.ipa, item.en_ex, "ENGLISH");
+                renderBack(item.cn, item.cn_ex, "中文意思");
+            } else {
+                renderFront(item.cn, "", item.cn_ex, "中文意思");
+                renderBack(item.en, item.en_ex, "ENGLISH");
+            }
+
+            document.getElementById('counter').innerText = `${currentIndex + 1} / ${cards.length}`;
+            document.getElementById('progressBar').style.width = `${((currentIndex + 1) / cards.length) * 100}%`;
+
+            if (document.getElementById('autoVoice').checked) {
+                // 自动读正面的所有内容
+                isEnglishFirst ? speakSequence([item.en, item.en_ex], 'en-US') : speakSequence([item.cn, item.cn_ex], 'zh-CN');
+            }
+        }
+
+        function renderFront(main, sub, ex, tag) {
+            document.getElementById('f-main').innerText = main;
+            document.getElementById('f-ipa').innerText = sub;
+            document.getElementById('f-ex').innerText = ex;
+            document.getElementById('tag-front').innerText = tag;
+        }
+
+        function renderBack(main, ex, tag) {
+            document.getElementById('b-main').innerText = main;
+            document.getElementById('b-ex').innerText = ex;
+            document.getElementById('tag-back').innerText = tag;
+        }
+
+        // 核心朗读逻辑
+        function speak(text, lang) {
+            window.speechSynthesis.cancel();
+            const msg = new SpeechSynthesisUtterance(text);
+            msg.lang = lang;
+            msg.rate = 0.9;
+            window.speechSynthesis.speak(msg);
+        }
+
+        function speakSequence(texts, lang) {
+            window.speechSynthesis.cancel();
+            texts.forEach((text, index) => {
+                const msg = new SpeechSynthesisUtterance(text);
+                msg.lang = lang;
+                msg.rate = 0.9;
+                // 如果是例句，稍微停顿一下再读
+                if (index > 0) msg.pauseBefore = 500;
+                window.speechSynthesis.speak(msg);
+            });
+        }
+
+        // 按钮点击朗读 (阻止冒泡防止翻牌)
+        function speakMainFront(e) { e.stopPropagation(); const item = cards[currentIndex]; isEnglishFirst ? speak(item.en, 'en-US') : speak(item.cn, 'zh-CN'); }
+        function speakExFront(e) { e.stopPropagation(); const item = cards[currentIndex]; isEnglishFirst ? speak(item.en_ex, 'en-US') : speak(item.cn_ex, 'zh-CN'); }
+        function speakMainBack(e) { e.stopPropagation(); const item = cards[currentIndex]; isEnglishFirst ? speak(item.cn, 'zh-CN') : speak(item.en, 'en-US'); }
+        function speakExBack(e) { e.stopPropagation(); const item = cards[currentIndex]; isEnglishFirst ? speak(item.cn_ex, 'zh-CN') : speak(item.en_ex, 'en-US'); }
+
+        function handleCardClick(e) {
+            const card = document.getElementById('card');
+            card.classList.toggle('is-flipped');
+            
+            // 翻转到背面且开启自动朗读时
+            if (card.classList.contains('is-flipped') && document.getElementById('autoVoice').checked) {
+                const item = cards[currentIndex];
+                isEnglishFirst ? speakSequence([item.cn, item.cn_ex], 'zh-CN') : speakSequence([item.en, item.en_ex], 'en-US');
+            }
+        }
+
+        function swapMode() {
+            isEnglishFirst = !isEnglishFirst;
+            document.getElementById('modeBtn').innerText = isEnglishFirst ? "🔄 模式: 英 ➔ 中" : "🔄 模式: 中 ➔ 英";
+            updateCard();
+        }
+
+        function nextCard() { currentIndex = (currentIndex + 1) % cards.length; updateCard(); }
+        function prevCard() { currentIndex = (currentIndex - 1 + cards.length) % cards.length; updateCard(); }
+        function shuffleCards() { cards.sort(() => Math.random() - 0.5); currentIndex = 0; updateCard(); }
+
+        function toggleAutoFlip() {
+            const btn = document.getElementById('autoFlipBtn');
+            if (autoFlipTimer) {
+                clearInterval(autoFlipTimer);
+                autoFlipTimer = null;
+                btn.innerText = "▶ 自动翻页";
+                btn.classList.remove('active');
+            } else {
+                btn.innerText = "停止翻页";
+                btn.classList.add('active');
+                autoFlipTimer = setInterval(() => {
+                    const card = document.getElementById('card');
+                    if (!card.classList.contains('is-flipped')) {
+                        handleCardClick({stopPropagation: ()=>{}});
+                    } else {
+                        nextCard();
+                    }
+                }, 5000); // 5秒一换
+            }
+        }
+
+        function toggleTheme() {
+            const body = document.body;
+            body.setAttribute('data-theme', body.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
+        }
+
+        // 键盘支持
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') { e.preventDefault(); handleCardClick(e); }
+            if (e.code === 'ArrowRight') nextCard();
+            if (e.code === 'ArrowLeft') prevCard();
+        });
+
+        // 启动
+        updateCard();
+    </script>
+</body>
+</html>
